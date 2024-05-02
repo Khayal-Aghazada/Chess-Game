@@ -1,24 +1,5 @@
 // Represents the chessboard, holding all the cells and pieces for a game of chess.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import java.awt.*;
 
 public class Board {
