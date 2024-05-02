@@ -23,9 +23,4 @@ public class Cell {
     public void setSelected(boolean isSelected) { this.isSelected = isSelected; }
     public Piece getPiece() { return piece; }
     public void setPiece(Piece piece) { this.piece = piece; }
-
-   /* public void moveTo(int x, int y){
-        this.x = x;
-        this.y = y;
-    }*/
 }
