@@ -17,17 +17,19 @@ public class Game extends JFrame {
 
     private void initializeGUI() {
         board = new Board(boardSize);
+        initializeBoard();
+        
         setTitle("Chess Game");
         setSize(boardSize * 100, boardSize * 100);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new GridLayout(boardSize, boardSize));
-        initializeBoard();
         setLocationRelativeTo(null);
         setVisible(true);
     }
 
     private void initializeBoard() {
         for (int i = 0; i < boardSize; i++) {
+            
             for (int j = 0; j < boardSize; j++) {
                 buttons[i][j] = new JButton();
                 buttons[i][j].setPreferredSize(new Dimension(100, 100));
@@ -39,12 +41,14 @@ public class Game extends JFrame {
                 add(buttons[i][j]);
 
                 Piece piece = cell.getPiece();
+                
                 if (piece != null) {
                     buttons[i][j].setIcon(new ImageIcon(getClass().getResource("/resources/" + piece.getName() + ".png")));
                 }
 
                 buttons[i][j].addActionListener(new ActionListener() {
                     @Override
+                    
                     public void actionPerformed(ActionEvent e) {
                         JButton clickedButton = (JButton) e.getSource();
                         int curX = (int) clickedButton.getClientProperty("row");
@@ -52,6 +56,7 @@ public class Game extends JFrame {
                         Piece piece = board.getCell(curX, curY).getPiece();
 
                         if (piece == null || piece.getColor() == currentTurn) {
+                            
                             if (sourceCell == null && piece != null) { // Selecting piece of correct color
                                 sourceCell = clickedButton;
                                 setCellColor(curX, curY, true);
@@ -80,11 +85,13 @@ public class Game extends JFrame {
 
     private void setCellColor(int x, int y, boolean isSelected) {
         Color cellColor;
+        
         if (isSelected) {
             cellColor = new Color(144, 238, 144); // Highlight color
         } else {
             cellColor = (x + y) % 2 == 0 ? Color.LIGHT_GRAY : new Color(120, 120, 120);
         }
+        
         buttons[x][y].setBackground(cellColor);
     }
 
@@ -98,6 +105,7 @@ public class Game extends JFrame {
             Cell source = board.getCell(sourceX, sourceY);
             Cell target = board.getCell(targetX, targetY);
             Piece piece = source.getPiece();
+            
             if (piece != null && target.getPiece() == null || target.getPiece().getColor() != piece.getColor()) { // Only move if target is empty or contains an opponent's piece
                 source.setPiece(null);
                 target.setPiece(piece);
