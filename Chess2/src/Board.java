@@ -31,7 +31,9 @@ public class Board {
 
     // Initializes the cells on the board with alternating colors.
     private void initCells() {
+        
         for (int i = 0; i < cells.length; i++) {
+            
             for (int j = 0; j < cells[i].length; j++) {
                 // Set cell colors in a checkerboard pattern.
                 Color color = (i + j) % 2 == 0 ? Color.WHITE : Color.BLACK;
@@ -81,6 +83,7 @@ public class Board {
             }
         }
     }
+    
     public Cell getCell(int x, int y) {
         return cells[x][y];
     }
