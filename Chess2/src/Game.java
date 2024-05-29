@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
+import java.util.TimerTask;
+import javax.swing.Timer;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -11,7 +13,21 @@ public class Game extends JFrame {
     private JButton[][] buttons = new JButton[boardSize][boardSize];
     private Color currentTurn = Color.WHITE; // White starts first
 
+    private int whiteRemaining;
+    private int blackRemaining;
+    private Timer whiteTimer;
+    private Timer blackTimer;
+    private JLabel whiteLabel;
+    private JLabel blackLabel;
+
     public Game() {
+        int chosenTime = chooseTimeAmount();
+        whiteRemaining = chosenTime;
+        blackRemaining = chosenTime;
+
+        whiteLabel = new JLabel("White Timer: " + formatTime(whiteRemaining));
+        blackLabel = new JLabel("Black Timer: " + formatTime(blackRemaining));
+
         initializeGUI();
     }
 
@@ -20,11 +36,199 @@ public class Game extends JFrame {
         initializeBoard();
 
         setTitle("Chess Game");
-        setSize(boardSize * 100, boardSize * 100);
+        setSize(boardSize * 100 + 50, boardSize * 100 + 100); // Extra space for the timers
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new GridLayout(boardSize, boardSize));
+        setLayout(new BorderLayout());
         setLocationRelativeTo(null);
+
+        JPanel boardPanel = new JPanel(new GridLayout(boardSize, boardSize));
+        for (int i = 0; i < boardSize; i++) {
+            for (int j = 0; j < boardSize; j++) {
+                boardPanel.add(buttons[i][j]);
+            }
+        }
+
+        // Styling the timer labels
+        whiteLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        whiteLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        whiteLabel.setOpaque(true);
+        whiteLabel.setBackground(Color.WHITE);
+        whiteLabel.setForeground(Color.BLACK);
+        whiteLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
+        whiteLabel.setPreferredSize(new Dimension(200, 50));
+
+        blackLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        blackLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        blackLabel.setOpaque(true);
+        blackLabel.setBackground(Color.BLACK);
+        blackLabel.setForeground(Color.WHITE);
+        blackLabel.setBorder(BorderFactory.createLineBorder(Color.WHITE, 2));
+        blackLabel.setPreferredSize(new Dimension(200, 50));
+
+        // Positioning the timers
+        JPanel whiteTimerPanel = new JPanel();
+        whiteTimerPanel.add(whiteLabel);
+        whiteTimerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        JPanel blackTimerPanel = new JPanel();
+        blackTimerPanel.add(blackLabel);
+        blackTimerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        add(blackTimerPanel, BorderLayout.NORTH);
+        add(boardPanel, BorderLayout.CENTER);
+        add(whiteTimerPanel, BorderLayout.SOUTH);
         setVisible(true);
+
+        initializeTimers();
+    }
+
+
+    private int chooseTimeAmount() {
+        String[] options = {"1 minute", "5 minutes", "10 minutes", "15 minutes", "30 minutes", "45 minutes"};
+        int[] times = {60, 300, 600, 900, 1800, 2700}; // corresponding times in seconds
+
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setPreferredSize(new Dimension(400, 150)); // Increase the size of the panel
+
+        // Load and resize the chess icon
+        ImageIcon icon = new ImageIcon(getClass().getResource("/resources/wpawn.png"));
+        Image image = icon.getImage(); // transform it
+        Image newimg = image.getScaledInstance(75, 75,  java.awt.Image.SCALE_SMOOTH); // scale it the smooth way
+        icon = new ImageIcon(newimg);  // transform it back
+
+        JLabel iconLabel = new JLabel(icon);
+        panel.add(iconLabel, BorderLayout.WEST);
+
+        JPanel inputPanel = new JPanel(new GridLayout(0, 1));
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        inputPanel.add(new JLabel("Choose the time amount per player:"));
+
+        JComboBox<String> comboBox = new JComboBox<>(options);
+        comboBox.setSelectedIndex(2);
+        comboBox.setFont(new Font("Arial", Font.PLAIN, 18));
+        comboBox.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+        comboBox.setBackground(Color.WHITE);
+        comboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (isSelected) {
+                    c.setBackground(new Color(17, 97, 124)); // Blue
+                    c.setForeground(Color.BLACK);
+                } else {
+                    c.setBackground(Color.WHITE);
+                    c.setForeground(Color.BLACK);
+                }
+                setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+                return c;
+            }
+        });
+        inputPanel.add(comboBox);
+
+        panel.add(inputPanel, BorderLayout.CENTER);
+
+        int result = JOptionPane.showConfirmDialog(null, panel, "Time Selection", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            String input = (String) comboBox.getSelectedItem();
+            if (input != null) {
+                for (int i = 0; i < options.length; i++) {
+                    if (options[i].equals(input)) {
+                        return times[i];
+                    }
+                }
+            }
+        }
+
+        return 600; // default to 10 minutes if no selection is made
+    }
+
+
+    private void initializeTimers() {
+        whiteTimer = new Timer(1000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (whiteRemaining > 0) {
+                    whiteRemaining--;
+                    whiteLabel.setText("White Timer: " + formatTime(whiteRemaining));
+                } else {
+                    whiteTimer.stop();
+                    showGameOverDialog("Game ended:\nTime ran out,\nBlack wins", "Black");
+                }
+            }
+        });
+
+        blackTimer = new Timer(1000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (blackRemaining > 0) {
+                    blackRemaining--;
+                    blackLabel.setText("Black Timer: " + formatTime(blackRemaining));
+                } else {
+                    blackTimer.stop();
+                    showGameOverDialog("Game ended:\nTime ran out,\nWhite wins", "White");
+                }
+            }
+        });
+    }
+
+    private String formatTime(int totalSeconds) {
+        int minutes = totalSeconds / 60;
+        int seconds = totalSeconds % 60;
+        return String.format("%02d:%02d", minutes, seconds);
+    }
+
+    private void showGameOverDialog(String message, String winner) {
+        // Stop both timers when the game ends
+        whiteTimer.stop();
+        blackTimer.stop();
+
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBackground(new Color(50, 205, 50));
+
+        JLabel messageLabel = new JLabel("<html>" + message.replaceAll("\n", "<br>") + "</html>");
+        messageLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        messageLabel.setForeground(Color.WHITE);
+
+        ImageIcon crownIcon = new ImageIcon(getClass().getResource("/resources/" + (winner.equals("White") ? "wcrown" : "bcrown") + ".png"));
+        JLabel crownLabel = new JLabel(crownIcon);
+
+        JButton newGameButton = new JButton("Start New Game");
+        newGameButton.setBackground(new Color(0, 128, 0)); // Set button background color to green
+        newGameButton.setForeground(Color.WHITE); // Set button text color to white
+        newGameButton.setFocusPainted(false);
+        newGameButton.setFont(new Font("Arial", Font.BOLD, 24));
+        newGameButton.setPreferredSize(new Dimension(100, 200));
+        newGameButton.setBorder(BorderFactory.createRaisedBevelBorder()); // Make the button appear 3D
+        newGameButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                dispose(); // Close the current game window
+                SwingUtilities.invokeLater(() -> new Game()); // Start a new game
+            }
+        });
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 0, 10, 0); // Add some spacing
+
+        panel.add(messageLabel, gbc);
+
+        gbc.gridy++;
+        panel.add(crownLabel, gbc);
+
+        gbc.gridy++;
+        panel.add(newGameButton, gbc);
+
+        JDialog dialog = new JDialog(Game.this, "Game Over", true);
+        dialog.getContentPane().add(panel);
+        dialog.setSize(500, 400);
+        dialog.setLocationRelativeTo(Game.this);
+        dialog.setVisible(true);
     }
 
     private void initializeBoard() {
@@ -64,58 +268,14 @@ public class Game extends JFrame {
                                 switchTurn(); // Switch turns only after a successful move
                                 if (!hasValidMoves(currentTurn)) {
                                     String winner = (currentTurn == Color.WHITE) ? "Black" : "White";
-                                    String message = isKingInCheck(currentTurn) ? "<html>Game ended: <br> CHECKMATE, <br> " + winner + " wins</html>" : "<html>Game ended: <br> DRAW</html>";
+                                    String message = isKingInCheck(currentTurn) ? "Game ended:\nCHECKMATE,\n" + winner + " wins" : "Game ended:\nDRAW";
 
-                                    // Create a panel with the message and the winner's crown image
-                                    JPanel panel = new JPanel(new GridBagLayout());
-                                    panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-                                    panel.setBackground(new Color(50,205,50));
+                                    // Stop the timers
+                                    whiteTimer.stop();
+                                    blackTimer.stop();
 
-                                    JLabel messageLabel = new JLabel(message);
-                                    messageLabel.setFont(new Font("Arial", Font.BOLD, 18));
-                                    messageLabel.setForeground(Color.WHITE);
-
-                                    ImageIcon crownIcon = new ImageIcon(getClass().getResource("/resources/" + (winner.equals("White") ? "wcrown" : "bcrown") + ".png"));
-                                    JLabel crownLabel = new JLabel(crownIcon);
-
-                                    JButton newGameButton = new JButton("Start New Game");
-                                    newGameButton.setBackground(new Color(0, 128, 0)); // Set button background color to green
-                                    newGameButton.setForeground(Color.WHITE); // Set button text color to white
-                                    newGameButton.setFocusPainted(false);
-                                    newGameButton.setFont(new Font("Arial", Font.BOLD, 24));
-                                    newGameButton.setPreferredSize(new Dimension(100, 200));
-                                    newGameButton.setBorder(BorderFactory.createRaisedBevelBorder()); // Make the button appear 3D
-                                    newGameButton.addActionListener(new ActionListener() {
-                                        @Override
-                                        public void actionPerformed(ActionEvent event) {
-                                            dispose(); // Close the current game window
-                                            SwingUtilities.invokeLater(() -> new Game()); // Start a new game
-                                        }
-                                    });
-
-                                    GridBagConstraints gbc = new GridBagConstraints();
-                                    gbc.gridx = 0;
-                                    gbc.gridy = 0;
-                                    gbc.anchor = GridBagConstraints.CENTER;
-                                    gbc.insets = new Insets(10, 0, 10, 0); // Add some spacing
-
-                                    panel.add(messageLabel, gbc);
-
-                                    gbc.gridy++;
-                                    panel.add(crownLabel, gbc);
-
-                                    gbc.gridy++;
-                                    panel.add(newGameButton, gbc);
-
-                                    JDialog dialog = new JDialog(Game.this, "Game Over", true);
-                                    dialog.getContentPane().add(panel);
-                                    dialog.setSize(300, 400);
-                                    dialog.setLocationRelativeTo(Game.this);
-                                    dialog.setVisible(true);
+                                    showGameOverDialog(message, winner);
                                 }
-
-
-
                             } else {
                                 // Clear the selection if the move is invalid
                                 if (sourceCell != null) {
@@ -138,8 +298,14 @@ public class Game extends JFrame {
         }
     }
 
-
     private void switchTurn() {
+        if (currentTurn == Color.WHITE) {
+            blackTimer.start();
+            whiteTimer.stop();
+        } else {
+            whiteTimer.start();
+            blackTimer.stop();
+        }
         currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
     }
 
@@ -412,7 +578,6 @@ public class Game extends JFrame {
         return x >= 0 && x < boardSize && y >= 0 && y < boardSize;
     }
 
-
     private boolean isValidKnightMove(int sourceX, int sourceY, int targetX, int targetY) {
         if (!isWithinBounds(targetX, targetY)) {
             return false;
@@ -454,19 +619,50 @@ public class Game extends JFrame {
         return isValidRookMove(sourceX, sourceY, targetX, targetY) || isValidBishopMove(sourceX, sourceY, targetX, targetY);
     }
 
+
+    // Added instance variables to track if rooks and kings have moved
+    private boolean whiteKingMoved = false;
+    private boolean blackKingMoved = false;
+    private boolean whiteRookMovedKingSide = false;
+    private boolean whiteRookMovedQueenSide = false;
+    private boolean blackRookMovedKingSide = false;
+    private boolean blackRookMovedQueenSide = false;
+
     private boolean isValidKingMove(int sourceX, int sourceY, int targetX, int targetY) {
         int dx = Math.abs(targetX - sourceX);
         int dy = Math.abs(targetY - sourceY);
 
+        // Castling
+        if (dx == 0 && dy == 2) {
+            if (currentTurn == Color.WHITE && !whiteKingMoved) {
+                // Kingside castling
+                if (targetY == 6 && !whiteRookMovedKingSide && board.getCell(sourceX, 5).getPiece() == null && board.getCell(sourceX, 6).getPiece() == null) {
+                    return !isInCheck(sourceX, sourceY, currentTurn) && !isInCheck(sourceX, 5, currentTurn) && !isInCheck(sourceX, 6, currentTurn);
+                }
+                // Queenside castling
+                if (targetY == 2 && !whiteRookMovedQueenSide && board.getCell(sourceX, 1).getPiece() == null && board.getCell(sourceX, 2).getPiece() == null && board.getCell(sourceX, 3).getPiece() == null) {
+                    return !isInCheck(sourceX, sourceY, currentTurn) && !isInCheck(sourceX, 2, currentTurn) && !isInCheck(sourceX, 3, currentTurn);
+                }
+            } else if (currentTurn == Color.BLACK && !blackKingMoved) {
+                // Kingside castling
+                if (targetY == 6 && !blackRookMovedKingSide && board.getCell(sourceX, 5).getPiece() == null && board.getCell(sourceX, 6).getPiece() == null) {
+                    return !isInCheck(sourceX, sourceY, currentTurn) && !isInCheck(sourceX, 5, currentTurn) && !isInCheck(sourceX, 6, currentTurn);
+                }
+                // Queenside castling
+                if (targetY == 2 && !blackRookMovedQueenSide && board.getCell(sourceX, 1).getPiece() == null && board.getCell(sourceX, 2).getPiece() == null && board.getCell(sourceX, 3).getPiece() == null) {
+                    return !isInCheck(sourceX, sourceY, currentTurn) && !isInCheck(sourceX, 2, currentTurn) && !isInCheck(sourceX, 3, currentTurn);
+                }
+            }
+        }
+
         // King moves one square in any direction
         if (dx <= 1 && dy <= 1) {
-            // Ensure the target cell is either empty or contains opponent's piece
-            return board.getCell(targetX, targetY).getPiece() == null ||
-                    board.getCell(targetX, targetY).getPiece().getColor() != board.getCell(sourceX, sourceY).getPiece().getColor();
+            return board.getCell(targetX, targetY).getPiece() == null || board.getCell(targetX, targetY).getPiece().getColor() != board.getCell(sourceX, sourceY).getPiece().getColor();
         }
 
         return false;
     }
+
 
     private void movePiece(Cell source, Cell target, int sourceX, int sourceY, int targetX, int targetY) {
         Piece piece = source.getPiece();
@@ -474,7 +670,47 @@ public class Game extends JFrame {
 
         if (capturedPiece != null) {
             System.out.println("Captured piece: " + capturedPiece.getName());
-            // Handle captured piece if necessary
+        }
+
+        // Handle castling
+        if (piece.getPieceType() == PieceType.ptKing && Math.abs(targetY - sourceY) == 2) {
+            // Kingside castling
+            if (targetY == 6) {
+                movePiece(board.getCell(sourceX, 7), board.getCell(sourceX, 5), sourceX, 7, sourceX, 5);
+            }
+            // Queenside castling
+            else if (targetY == 2) {
+                movePiece(board.getCell(sourceX, 0), board.getCell(sourceX, 3), sourceX, 0, sourceX, 3);
+            }
+            if (currentTurn == Color.WHITE) {
+                whiteKingMoved = true;
+            } else {
+                blackKingMoved = true;
+            }
+        }
+
+        // Mark king and rook as moved
+        if (piece.getPieceType() == PieceType.ptKing) {
+            if (currentTurn == Color.WHITE) {
+                whiteKingMoved = true;
+            } else {
+                blackKingMoved = true;
+            }
+        }
+        if (piece.getPieceType() == PieceType.ptRook) {
+            if (sourceX == 7) {
+                if (sourceY == 0) {
+                    whiteRookMovedQueenSide = true;
+                } else if (sourceY == 7) {
+                    whiteRookMovedKingSide = true;
+                }
+            } else if (sourceX == 0) {
+                if (sourceY == 0) {
+                    blackRookMovedQueenSide = true;
+                } else if (sourceY == 7) {
+                    blackRookMovedKingSide = true;
+                }
+            }
         }
 
         source.setPiece(null);
@@ -482,6 +718,7 @@ public class Game extends JFrame {
         buttons[sourceX][sourceY].setIcon(null);
         buttons[targetX][targetY].setIcon(new ImageIcon(getClass().getResource("/resources/" + piece.getName() + ".png")));
     }
+
 
     private boolean hasValidMoves(Color color) {
         for (int i = 0; i < boardSize; i++) {
