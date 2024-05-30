@@ -4,6 +4,7 @@
 Prerequisites**
 
 Java Development Kit (JDK) installed on your system.
+
 Git installed to clone the repository.
 
 **Getting Started**
