@@ -1,4 +1,4 @@
-****How to run the game****
+****How to run the game:****
 
 **Running the Java Project
 Prerequisites**
