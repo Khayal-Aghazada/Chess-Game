@@ -9,6 +9,7 @@ Git installed to clone the repository.
 Clone the repository:
 
 bash
+
     git clone https://github.com/Khayal-Aghazada/Chess-Game.git
 
 Navigate to the project directory:
